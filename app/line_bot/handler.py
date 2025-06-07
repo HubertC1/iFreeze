@@ -17,7 +17,36 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 STATIC_IMAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images')
 os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
 
-LIFF_URL = os.getenv('LIFF_URL', 'https://your-ngrok-url.ngrok-free.app/liff/')
+NGROK_URL_BASE = os.getenv('NGROK_URL_BASE', 'http://localhost:8000')
+WEBAPP_URL = f"{NGROK_URL_BASE}/liff/"
+
+# Helper to build a food card bubble for Flex Message
+def build_food_bubble(food, webapp_url):
+    return {
+        "type": "bubble",
+        "size": "kilo",
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": food["name"], "weight": "bold", "size": "lg", "wrap": True},
+                {"type": "text", "text": f"Status: {food['status']}", "size": "md", "color": "#888888", "margin": "md"},
+                {"type": "text", "text": f"Category: {food['category']}", "size": "sm", "color": "#aaaaaa", "margin": "sm"},
+                {"type": "text", "text": f"Added: {food['added_date']}", "size": "sm", "color": "#aaaaaa", "margin": "sm"},
+                {"type": "text", "text": f"Expiry: {food['expiry_date'] or '-'}", "size": "sm", "color": "#aaaaaa", "margin": "sm"},
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "uri",
+                        "label": "View in Web App",
+                        "uri": webapp_url
+                    },
+                    "style": "primary",
+                    "margin": "lg"
+                }
+            ]
+        }
+    }
 
 def handle_text_message(event):
     text = event.message.text.lower()
@@ -58,31 +87,49 @@ def handle_text_message(event):
             )
         
         elif text == "status":
-            status = get_fridge_status(db)
-            flex_message = FlexSendMessage(
-                alt_text="View fridge status",
-                contents={
-                    "type": "bubble",
-                    "body": {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {"type": "text", "text": "Fridge Status", "weight": "bold", "size": "lg"},
-                            {"type": "text", "text": status, "wrap": True, "margin": "md"},
-                            {
-                                "type": "button",
-                                "action": {
-                                    "type": "uri",
-                                    "label": "Open Fridge LIFF",
-                                    "uri": LIFF_URL
-                                },
-                                "style": "primary",
-                                "margin": "lg"
-                            }
-                        ]
+            # Get food list for carousel
+            from ..models.database import FoodItem
+            foods = db.query(FoodItem).all()
+            if foods:
+                bubbles = [build_food_bubble({
+                    "name": f.name,
+                    "status": f.status,
+                    "category": f.category,
+                    "added_date": f.added_date.strftime('%Y-%m-%d'),
+                    "expiry_date": f.expiry_date.strftime('%Y-%m-%d') if f.expiry_date else None
+                }, WEBAPP_URL) for f in foods[:5]]
+                flex_message = FlexSendMessage(
+                    alt_text="Fridge Items",
+                    contents={
+                        "type": "carousel",
+                        "contents": bubbles
                     }
-                }
-            )
+                )
+            else:
+                # No food, show a single card
+                flex_message = FlexSendMessage(
+                    alt_text="Fridge is empty",
+                    contents={
+                        "type": "bubble",
+                        "body": {
+                            "type": "box",
+                            "layout": "vertical",
+                            "contents": [
+                                {"type": "text", "text": "Fridge is empty!", "weight": "bold", "size": "lg"},
+                                {
+                                    "type": "button",
+                                    "action": {
+                                        "type": "uri",
+                                        "label": "Open Web App",
+                                        "uri": WEBAPP_URL
+                                    },
+                                    "style": "primary",
+                                    "margin": "lg"
+                                }
+                            ]
+                        }
+                    }
+                )
             line_bot_api.reply_message(event.reply_token, flex_message)
         
         else:

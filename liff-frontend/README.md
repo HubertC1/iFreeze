@@ -10,3 +10,13 @@ Currently, two official plugins are available:
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Environment Variables
+
+- `NGROK_URL_BASE`: The base URL for the backend API (e.g., your ngrok URL). Used to construct API endpoints in the frontend.
+
+Example `.env`:
+
+```
+NGROK_URL_BASE=https://123456.ngrok-free.app
+```

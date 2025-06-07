@@ -44,12 +44,18 @@ os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
 
 @app.post("/webhook")
 async def line_webhook(request: Request):
-    signature = request.headers["X-Line-Signature"]
+    signature = request.headers.get("X-Line-Signature", "")
     body = await request.body()
+    print("[WEBHOOK] Received body:", body)
     try:
         handler.handle(body.decode(), signature)
     except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        print("[WEBHOOK] Invalid signature error")
+        return {"status": "invalid signature"}
+    except Exception as e:
+        print("[WEBHOOK] Exception:", e)
+        print("[WEBHOOK] Raw body:", body)
+        return {"status": "error", "error": str(e)}
     return {"status": "ok"}
 
 @handler.add(MessageEvent, message=TextMessage)

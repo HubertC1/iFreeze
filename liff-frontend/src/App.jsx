@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';
 
-// const API_URL = 'http://localhost:8000/fridge/foods'; // Change to your ngrok URL for production
-const API_URL = 'https://516d-140-112-25-29.ngrok-free.app/fridge/foods'
+// API base URL is now read from VITE_NGROK_URL_BASE in .env file
+const API_BASE = import.meta.env.NGROK_URL_BASE || 'http://localhost:8000';
+const API_URL = `${API_BASE}/fridge/foods`;
+const IMAGE_PLACEHOLDER = '/app/static/images/api_20250607_194207_photo.jpg'; // Placeholder image path
 
 const categoryIcons = {
   Food: '🍕',
@@ -43,6 +45,7 @@ function DetailsModal({ food, onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h2>{food.name}</h2>
+        <img src={IMAGE_PLACEHOLDER} alt={food.name} style={{width: '100%', borderRadius: '10px', marginBottom: '1rem'}} />
         <p><b>Category:</b> {food.category}</p>
         <p><b>Added:</b> {food.added_date}</p>
         {food.expiry_date && <p><b>Expiry:</b> {food.expiry_date}</p>}
@@ -58,13 +61,39 @@ function App() {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Polling for live updates
   useEffect(() => {
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        setFoods(data);
-        setLoading(false);
-      });
+    let isMounted = true;
+    const fetchFoods = () => {
+      console.log('Fetching from:', API_URL);
+      fetch(API_URL)
+        .then(res => {
+          console.log('Response status:', res.status);
+          if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return res.json();
+        })
+        .then(data => {
+          console.log('Received data:', data);
+          if (isMounted) {
+            setFoods(data);
+            setLoading(false);
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching foods:', error);
+          if (isMounted) {
+            setLoading(false);
+          }
+        });
+    };
+    fetchFoods();
+    const interval = setInterval(fetchFoods, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   return (
