@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Request, HTTPException, Depends, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, ImageMessage
@@ -11,6 +12,7 @@ from .database import engine, get_db
 from sqlalchemy.orm import Session
 import logging
 from datetime import datetime
+from .models.database import FoodItem
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -27,6 +29,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve LIFF frontend at /liff
+liff_path = os.path.join(os.path.dirname(__file__), 'static', 'liff')
+if os.path.exists(liff_path):
+    app.mount("/liff", StaticFiles(directory=liff_path, html=True), name="liff")
 
 # LINE Bot setup
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
@@ -62,16 +69,32 @@ async def get_status(db: Session = Depends(get_db)):
     from .services.fridge_service import get_fridge_status
     return {"status": get_fridge_status(db)}
 
+@app.get("/fridge/foods")
+async def get_foods(db: Session = Depends(get_db)):
+    foods = db.query(FoodItem).all()
+    return [
+        {
+            "id": f.id,
+            "name": f.name,
+            "category": f.category,
+            "added_date": f.added_date.strftime('%Y-%m-%d'),
+            "expiry_date": f.expiry_date.strftime('%Y-%m-%d') if f.expiry_date else None,
+            "status": f.status
+        }
+        for f in foods
+    ]
+
 @app.post("/fridge/image")
 async def process_fridge_image(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    logging.info(f"[DEBUG] Received image of size: {len(image_bytes)} bytes")
+    logging.info(f"[DEBUG] Received file: {file.filename}, size: {len(image_bytes)} bytes, content_type: {file.content_type}")
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"api_{timestamp}.jpg"
+    # Save with original filename and extension, prefixed with timestamp
+    filename = f"api_{timestamp}_{file.filename}"
     filepath = os.path.join(STATIC_IMAGE_DIR, filename)
     with open(filepath, 'wb') as f:
         f.write(image_bytes)
-    return {"status": "success", "message": f"[DEBUG] Image received and saved as: {filepath}"}
+    return {"status": "success", "message": f"[DEBUG] File received and saved as: {filepath}"}
 
 if __name__ == "__main__":
     import uvicorn
