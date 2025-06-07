@@ -60,6 +60,31 @@ def remove_food_item(name: str, db: Session = next(get_db())):
         return True
     return False
 
+def update_fridge_from_gemini(food_list, db: Session):
+    for item in food_list:
+        name = item.get("name")
+        quantity = float(item.get("quantity", 1))
+        status = item.get("status", "fresh")
+        food_item = db.query(FoodItem).filter(FoodItem.name == name).first()
+        if not food_item:
+            food_item = FoodItem(
+                name=name,
+                category="other",
+                status=status,
+                expiry_date=datetime.utcnow() + timedelta(days=7)
+            )
+            db.add(food_item)
+            db.flush()
+        else:
+            food_item.status = status
+        entry = FridgeEntry(
+            food_item_id=food_item.id,
+            quantity=quantity,
+            is_spoiled=(status == "spoiled")
+        )
+        db.add(entry)
+    db.commit()
+
 def check_spoilage(db: Session):
     """Check for items that might be spoiling soon"""
     entries = db.query(FridgeEntry).join(FridgeEntry.food_item).filter(
