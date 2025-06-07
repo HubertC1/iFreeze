@@ -39,3 +39,5 @@ pytest_cache/
 build/
 dist/
 *.egg-info/ 
+
+app/static/images

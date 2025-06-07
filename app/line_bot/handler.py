@@ -1,5 +1,5 @@
 from linebot import LineBotApi, WebhookHandler
-from linebot.models import TextSendMessage, ImageSendMessage
+from linebot.models import TextSendMessage, ImageSendMessage, FlexSendMessage
 from linebot.exceptions import InvalidSignatureError
 from fastapi import HTTPException
 import os
@@ -16,6 +16,8 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 STATIC_IMAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images')
 os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
+
+LIFF_URL = os.getenv('LIFF_URL', 'https://your-ngrok-url.ngrok-free.app/liff/')
 
 def handle_text_message(event):
     text = event.message.text.lower()
@@ -57,11 +59,31 @@ def handle_text_message(event):
         
         elif text == "status":
             status = get_fridge_status(db)
-            response = "📊 Fridge Status:\n\n" + status
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=response)
+            flex_message = FlexSendMessage(
+                alt_text="View fridge status",
+                contents={
+                    "type": "bubble",
+                    "body": {
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                            {"type": "text", "text": "Fridge Status", "weight": "bold", "size": "lg"},
+                            {"type": "text", "text": status, "wrap": True, "margin": "md"},
+                            {
+                                "type": "button",
+                                "action": {
+                                    "type": "uri",
+                                    "label": "Open Fridge LIFF",
+                                    "uri": LIFF_URL
+                                },
+                                "style": "primary",
+                                "margin": "lg"
+                            }
+                        ]
+                    }
+                }
             )
+            line_bot_api.reply_message(event.reply_token, flex_message)
         
         else:
             help_text = """🤖 iFreeze Bot Commands:\n\n- Type \"add item_name quantity\" to add items\n- Type \"remove item_name\" to remove items\n- Type \"status\" to check fridge contents\n- Type \"recipe\" to get a recipe suggestion\n- Type \"help\" to see this message"""
