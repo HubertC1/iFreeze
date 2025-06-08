@@ -1,0 +1,22 @@
+[
+    {
+        "object_id": 0,
+        "bounding_box": [
+            1373,
+            10,
+            1995,
+            999
+        ],
+        "image_path": "./result/object_0.png"
+    },
+    {
+        "object_id": 1,
+        "bounding_box": [
+            727,
+            369,
+            1253,
+            879
+        ],
+        "image_path": "./result/object_1.png"
+    }
+]

@@ -4,4 +4,6 @@ opencv-python
 numpy
 torch
 transformers
-Pillow 
+Pillow
+flask==3.0.2
+werkzeug==3.0.1  
