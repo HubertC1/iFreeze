@@ -1,5 +1,5 @@
 import json
-
+import os
 # Function to calculate IoU
 def calculate_iou(box1, box2):
     x1, y1, x2, y2 = box1
@@ -28,7 +28,7 @@ def calculate_iou(box1, box2):
     return iou
 
 # Function to check for matching objects
-def check_matching_objects(old_json, new_json, iou_threshold=0.5):
+def check_matching_objects(old_json, new_json, save_dir, iou_threshold=0.5):
     # Load JSON data
     with open(old_json, 'r') as f1, open(new_json, 'r') as f2:
         data1 = json.load(f1)
@@ -54,13 +54,13 @@ def check_matching_objects(old_json, new_json, iou_threshold=0.5):
     unmatched_new_formatted = [{'new_object_id': obj['object_id'], 'bounding_box': obj['bounding_box']} for obj in unmatched_new] # object_id -> id in new.json
 
     # Save matches and unmatched objects to JSON files
-    with open('match.json', 'w') as match_file:
+    with open(os.path.join(save_dir, 'match.json'), 'w') as match_file:
         json.dump(matches, match_file, indent=4)
 
-    with open('delete.json', 'w') as delete_file:
+    with open(os.path.join(save_dir,'delete.json'), 'w') as delete_file:
         json.dump(unmatched_old_formatted, delete_file, indent=4)
 
-    with open('add.json', 'w') as add_file:
+    with open(os.path.join(save_dir, 'add.json'), 'w') as add_file:
         json.dump(unmatched_new_formatted, add_file, indent=4)
 
     return matches
@@ -69,7 +69,7 @@ def check_matching_objects(old_json, new_json, iou_threshold=0.5):
 if __name__ == "__main__":
     old_json = 'result1.json'
     new_json = 'result2.json'
-    matches = check_matching_objects(old_json, new_json)
+    matches = check_matching_objects(old_json, new_json, './')
     print("Matching objects saved in match.json")
     print("Unmatched objects in old JSON saved in delete.json")
     print("Unmatched objects in new JSON saved in add.json")

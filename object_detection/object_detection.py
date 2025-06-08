@@ -4,6 +4,7 @@ import matplotlib.patches as patches
 import cv2
 import numpy as np
 import json
+import os
 
 import torch
 from PIL import Image
@@ -84,22 +85,11 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
     for box, score in zip(boxes, scores):
         if score > threshold:  # Confidence threshold
             x1, y1, x2, y2 = map(int, box)
-            
-            # Crop the object from the image
-            cropped_object = image[y1:y2, x1:x2]
-            
-            # Save the cropped object as a new image
-            object_image_path = f'object_{object_id}.png'
-            cv2.imwrite(object_image_path, cropped_object)
-            
-            # Log the object data
             object_data.append({
                 'object_id': object_id,
                 'bounding_box': [x1, y1, x2, y2],
-                'image_path': object_image_path
             })
             
-            object_id += 1
 
     # Remove redundant boxes based on IoU before writing to JSON
     filtered_object_data = []
@@ -108,11 +98,20 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
         for j, obj2 in enumerate(object_data):
             if i > j:
                 iou = calculate_iou(obj1['bounding_box'], obj2['bounding_box'])
-                if iou > 0.7:
+                if iou > 0.9:
                     is_redundant = True
                     break
         if not is_redundant:
-            filtered_object_data.append(obj1)
+            object_image_path = os.path.join(save_dir, f'object_{object_id}.png')
+            x1, y1, x2, y2 = map(int, obj1['bounding_box'])
+            cropped_object = image[y1:y2, x1:x2]
+            cv2.imwrite(object_image_path, cropped_object)
+            filtered_object_data.append({
+                'object_id': object_id,
+                'bounding_box': obj1['bounding_box'],
+                'image_path': object_image_path
+            })
+            object_id += 1
 
     # Write the filtered object data to a JSON file
     with open(json_path, 'w') as json_file:

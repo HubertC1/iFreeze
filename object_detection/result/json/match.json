@@ -1,0 +1,12 @@
+[
+    {
+        "old_object_id": 0,
+        "new_object_id": 0,
+        "iou": 1.0
+    },
+    {
+        "old_object_id": 1,
+        "new_object_id": 1,
+        "iou": 1.0
+    }
+]
