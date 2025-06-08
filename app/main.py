@@ -31,9 +31,11 @@ app.add_middleware(
 )
 
 # Serve LIFF frontend at /liff
-liff_path = os.path.join(os.path.dirname(__file__), 'static', 'liff')
-if os.path.exists(liff_path):
-    app.mount("/liff", StaticFiles(directory=liff_path, html=True), name="liff")
+# liff_path = os.path.join(os.path.dirname(__file__), 'static', 'liff')
+# if os.path.exists(liff_path):
+#     app.mount("/liff", StaticFiles(directory=liff_path, html=True), name="liff")
+frontend_build_dir = os.path.join(os.path.dirname(__file__), '../liff-frontend/dist')
+app.mount("/liff", StaticFiles(directory=frontend_build_dir, html=True), name="liff")
 
 # LINE Bot setup
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))

@@ -17,7 +17,7 @@ handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 STATIC_IMAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'images')
 os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
 
-NGROK_URL_BASE = os.getenv('NGROK_URL_BASE', 'http://localhost:8000')
+NGROK_URL_BASE = os.getenv('VITE_NGROK_URL_BASE', 'http://localhost:8000')
 WEBAPP_URL = f"{NGROK_URL_BASE}/liff/"
 
 # Helper to build a food card bubble for Flex Message
