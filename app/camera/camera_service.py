@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-API_URL = os.getenv('API_URL', 'http://localhost:8000')
+NGROK_URL_BASE = os.getenv('VITE_NGROK_URL_BASE', 'http://localhost:8000')
+API_URL = NGROK_URL_BASE
 
 class FridgeCamera:
     def __init__(self):

@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 import logging
 from datetime import datetime
 from .models.database import FoodItem
+from fastapi.responses import FileResponse
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -31,25 +32,33 @@ app.add_middleware(
 )
 
 # Serve LIFF frontend at /liff
-liff_path = os.path.join(os.path.dirname(__file__), 'static', 'liff')
-if os.path.exists(liff_path):
-    app.mount("/liff", StaticFiles(directory=liff_path, html=True), name="liff")
+frontend_build_dir = os.path.join(os.path.dirname(__file__), '../liff-frontend/dist')
+app.mount("/liff", StaticFiles(directory=frontend_build_dir, html=True), name="liff")
+
+# Mount static images directory
+# STATIC_IMAGE_DIR = os.path.join(os.path.dirname(__file__), 'static', 'images')
+STATIC_IMAGE_DIR = "/Users/hubert/NTU/Courses/WebLab/iFreeze/app/static/images"
+os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
+app.mount("/static/images", StaticFiles(directory=STATIC_IMAGE_DIR), name="static_images")
 
 # LINE Bot setup
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
-STATIC_IMAGE_DIR = os.path.join(os.path.dirname(__file__), 'static', 'images')
-os.makedirs(STATIC_IMAGE_DIR, exist_ok=True)
-
 @app.post("/webhook")
 async def line_webhook(request: Request):
-    signature = request.headers["X-Line-Signature"]
+    signature = request.headers.get("X-Line-Signature", "")
     body = await request.body()
+    print("[WEBHOOK] Received body:", body)
     try:
         handler.handle(body.decode(), signature)
     except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        print("[WEBHOOK] Invalid signature error")
+        return {"status": "invalid signature"}
+    except Exception as e:
+        print("[WEBHOOK] Exception:", e)
+        print("[WEBHOOK] Raw body:", body)
+        return {"status": "error", "error": str(e)}
     return {"status": "ok"}
 
 @handler.add(MessageEvent, message=TextMessage)
@@ -95,6 +104,56 @@ async def process_fridge_image(file: UploadFile = File(...)):
     with open(filepath, 'wb') as f:
         f.write(image_bytes)
     return {"status": "success", "message": f"[DEBUG] File received and saved as: {filepath}"}
+
+@app.post("/upload/zip")
+async def upload_zip(file: UploadFile = File(...)):
+    if not file.filename.endswith('.zip'):
+        raise HTTPException(status_code=400, detail="Only .zip files are allowed")
+    
+    # Create a directory for zip files if it doesn't exist
+    ZIP_DIR = os.path.join(os.path.dirname(__file__), 'static', 'zips')
+    os.makedirs(ZIP_DIR, exist_ok=True)
+    
+    # Read the file content
+    file_bytes = await file.read()
+    logging.info(f"[DEBUG] Received zip file: {file.filename}, size: {len(file_bytes)} bytes")
+    
+    # Save with timestamp prefix
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"upload_{timestamp}_{file.filename}"
+    filepath = os.path.join(ZIP_DIR, filename)
+    
+    # Save the file
+    with open(filepath, 'wb') as f:
+        f.write(file_bytes)
+    
+    return {
+        "status": "success",
+        "message": f"File uploaded successfully",
+        "filename": filename,
+        "size": len(file_bytes)
+    }
+
+@app.get("/static/images/{filename}")
+async def get_image(filename: str):
+    image_path = os.path.join(STATIC_IMAGE_DIR, filename)
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+    
+    return FileResponse(image_path)
+
+@app.get("/api/images")
+async def list_images():
+    try:
+        files = os.listdir(STATIC_IMAGE_DIR)
+        image_files = [f for f in files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif'))]
+        return {
+            "status": "success",
+            "images": image_files,
+            "count": len(image_files)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn
