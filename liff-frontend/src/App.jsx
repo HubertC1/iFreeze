@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 
 // API base URL is now read from VITE_NGROK_URL_BASE in .env file
-const API_BASE = import.meta.env.NGROK_URL_BASE || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_NGROK_URL_BASE || 'http://localhost:8000';
 const API_URL = `${API_BASE}/fridge/foods`;
 const IMAGE_PLACEHOLDER = '/app/static/images/api_20250607_194207_photo.jpg'; // Placeholder image path
 

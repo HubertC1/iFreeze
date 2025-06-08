@@ -13,10 +13,10 @@ If you are developing a production application, we recommend using TypeScript wi
 
 ## Environment Variables
 
-- `NGROK_URL_BASE`: The base URL for the backend API (e.g., your ngrok URL). Used to construct API endpoints in the frontend.
+- `VITE_NGROK_URL_BASE`: The base URL for the backend API (e.g., your ngrok URL). Used to construct API endpoints in the frontend.
 
 Example `.env`:
 
 ```
-NGROK_URL_BASE=https://123456.ngrok-free.app
+VITE_NGROK_URL_BASE=https://123456.ngrok-free.app
 ```

@@ -41,3 +41,4 @@ dist/
 *.egg-info/ 
 
 app/static/images
+app/static/zips
