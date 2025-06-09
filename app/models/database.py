@@ -15,17 +15,6 @@ class FoodItem(Base):
     expiry_date = Column(DateTime)
     status = Column(String)  # fresh, spoiling, spoiled
     temp_object_id = Column(Integer, index=True, nullable=True)  # For mapping to detection object ids
-    entries = relationship("FridgeEntry", back_populates="food_item")
-
-class FridgeEntry(Base):
-    __tablename__ = "fridge_entries"
-
-    id = Column(Integer, primary_key=True, index=True)
-    food_item_id = Column(Integer, ForeignKey("food_items.id"))
-    detected_date = Column(DateTime, default=datetime.utcnow)
-    quantity = Column(Float)
-    is_spoiled = Column(Boolean, default=False)
-    food_item = relationship("FoodItem", back_populates="entries")
 
 class User(Base):
     __tablename__ = "users"
