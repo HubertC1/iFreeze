@@ -42,6 +42,30 @@
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.2);
+  user-select: none;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+}
+
+.card.dragging {
+  opacity: 0.5;
+  transform: rotate(5deg) scale(0.95);
+  cursor: grabbing;
+}
+
+.card:active {
+  cursor: grabbing;
 }
 
 .read-the-docs {
@@ -71,22 +95,6 @@ h1 {
   margin-bottom: 2rem;
 }
 
-.card {
-  background: #ffffff;
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-  overflow: hidden;
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-  border: 1px solid rgba(255,255,255,0.2);
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 48px rgba(0,0,0,0.15);
-}
-
 .card-status-bar {
   height: 6px;
   background: linear-gradient(90deg, #4CAF50, #8BC34A);
@@ -108,28 +116,6 @@ h1 {
   text-align: center;
   min-height: 200px;
   position: relative;
-}
-
-.delete-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: transparent;
-  color: #757575;
-  border: none;
-  border-radius: 0;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.delete-btn:hover {
-  color: #f44336;
-  transform: scale(1.1);
 }
 
 .category-badge {
@@ -363,6 +349,56 @@ h1 {
 
 .recipe-card li {
   margin-bottom: 0.5rem;
+}
+
+/* Trash Bin Styles */
+.trash-bin-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+  padding: 1rem;
+}
+
+.trash-bin {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 3px dashed #dee2e6;
+  border-radius: 20px;
+  padding: 2rem 3rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  min-width: 250px;
+  cursor: pointer;
+}
+
+.trash-bin.drag-over {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+  border-color: #f44336;
+  border-style: solid;
+  transform: scale(1.05);
+  box-shadow: 0 8px 32px rgba(244, 67, 54, 0.2);
+}
+
+.trash-bin-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.trash-bin.drag-over .trash-bin-icon {
+  transform: scale(1.2);
+  filter: drop-shadow(0 4px 8px rgba(244, 67, 54, 0.3));
+}
+
+.trash-bin-text {
+  font-size: 1rem;
+  color: #6c757d;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.trash-bin.drag-over .trash-bin-text {
+  color: #f44336;
+  font-weight: 600;
 }
 
 /* Responsive Design */

@@ -31,18 +31,30 @@ function FoodCard({ food, onDetails, onDelete }) {
   const imgUrl = food.temp_object_id !== undefined && food.temp_object_id !== null
     ? `${API_BASE}/static/ind_images/object_${food.temp_object_id}.png`
     : IMAGE_PLACEHOLDER;
+
+  const handleDragStart = (e) => {
+    e.dataTransfer.setData('text/plain', food.id.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    // Add visual feedback during drag
+    setTimeout(() => {
+      e.target.classList.add('dragging');
+    }, 0);
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.classList.remove('dragging');
+  };
+
   return (
     <div
       className={`card status-${food.status.toLowerCase()}`}
       onClick={() => onDetails(food)}
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       <div className="card-status-bar"></div>
       <div className="card-content">
-        <button className="delete-btn" title="Delete" onClick={e => { e.stopPropagation(); onDelete(food.id); }}>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4.5 4.5L13.5 13.5M13.5 4.5L4.5 13.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
         <div className="category-badge">
           <span>{categoryIcons[food.category] || '🍽️'}</span>
           <span>{food.category}</span>
@@ -156,11 +168,40 @@ function RecipeSection({ foods }) {
   );
 }
 
+function TrashBin({ onDrop, isDragOver }) {
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    const foodId = parseInt(e.dataTransfer.getData('text/plain'));
+    onDrop(foodId);
+  };
+
+  return (
+    <div 
+      className={`trash-bin ${isDragOver ? 'drag-over' : ''}`}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      <div className="trash-bin-icon">
+        🗑️
+      </div>
+      <div className="trash-bin-text">
+        {isDragOver ? 'Drop to Delete' : 'Drag items here to delete'}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [foods, setFoods] = useState([]);
   const [selectedFood, setSelectedFood] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     const fetchFoods = async () => {
@@ -196,15 +237,40 @@ function App() {
     }
   };
 
+  const handleTrashDrop = (foodId) => {
+    handleDelete(foodId);
+    setIsDragOver(false);
+  };
+
+  const handleDragEnter = () => {
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    // Only set dragOver to false if we're leaving the trash bin area completely
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setIsDragOver(false);
+    }
+  };
+
   return (
     <div className="container">
       <h1>Fridge Contents</h1>
       {loading ? <div>Loading...</div> : (
-        <div className="card-grid">
-          {foods.map(food => (
-            <FoodCard key={food.id} food={food} onDetails={setSelectedFood} onDelete={handleDelete} />
-          ))}
-        </div>
+        <>
+          <div className="card-grid">
+            {foods.map(food => (
+              <FoodCard key={food.id} food={food} onDetails={setSelectedFood} onDelete={handleDelete} />
+            ))}
+          </div>
+          <div 
+            className="trash-bin-container"
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+          >
+            <TrashBin onDrop={handleTrashDrop} isDragOver={isDragOver} />
+          </div>
+        </>
       )}
       <DetailsModal food={selectedFood} onClose={() => setSelectedFood(null)} />
       <RecipeSection foods={foods.filter(f => f.status.toLowerCase() !== 'spoiled')} />
