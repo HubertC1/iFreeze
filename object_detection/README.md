@@ -8,6 +8,28 @@ This project sets up a local server on port 8000 and exposes it to the internet 
 - ngrok account and authtoken
 - pip (Python package manager)
 
+## Installing Ngrok on Linux
+
+1. **Download ngrok**
+   ```bash
+   wget https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+   ```
+
+2. **Extract the downloaded file**
+   ```bash
+   tar -xvzf ngrok-v3-stable-linux-amd64.tgz
+   ```
+
+3. **Move ngrok to a directory in your PATH**
+   ```bash
+   sudo mv ngrok /usr/local/bin/
+   ```
+
+4. **Verify the installation**
+   ```bash
+   ngrok version
+   ```
+
 ## Setup Instructions
 
 1. **Install Dependencies**

@@ -6,6 +6,7 @@ import json
 from werkzeug.utils import secure_filename
 from object_detection import detect_objects
 from change_detection import check_matching_objects
+from threading import Thread
 
 app = Flask(__name__)
 
@@ -18,22 +19,12 @@ os.makedirs(JSON_DIR, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Configuration
-API_URL = 'https://example.com/api/get_image'
-UPLOAD_URL = 'https://052f-140-112-25-5.ngrok-free.app/upload/zip'
+UPLOAD_URL = 'https://dae2-140-112-25-46.ngrok-free.app/upload/zip'
 
-def process_image():
+def process_image(img_path):
     save_dir = './'
-    img_filename = 'fruit.png'
-    img_path = os.path.join(save_dir, img_filename)
-    
-    # Download image from API
-    # response = requests.get(API_URL)
-    # if response.status_code != 200:
-    #     return {'error': f'Failed to download image. Status code: {response.status_code}'}
-    
-    # # Save the image
-    # with open(img_path, 'wb') as f:
-    #     f.write(response.content)
+    # img_filename = 'fruit.png'  # Remove hardcoded filename
+    # img_path = os.path.join(save_dir, img_filename)  # Use provided img_path
     
     # Process JSON files
     json_path = os.path.join(JSON_DIR, 'new.json')
@@ -45,15 +36,15 @@ def process_image():
     
     # Run object detection
     detect_objects(img_path=img_path, json_path=json_path, save_dir=RESULT_DIR)
-    
+    print("object_detect")
     # Run change detection if old.json exists
     if os.path.exists(old_json_path):
         check_matching_objects(old_json=old_json_path, new_json=json_path, save_dir=JSON_DIR)
-    
+    print("match check")
     # Create zip file
     zip_filename = 'data.zip'
     shutil.make_archive('data', 'zip', RESULT_DIR)
-    
+    print("data.zip save")
     # Upload results
     try:
         with open(zip_filename, 'rb') as f:
@@ -61,7 +52,7 @@ def process_image():
                 'file': (zip_filename, f, 'application/zip')
             }
             upload_response = requests.post(UPLOAD_URL, files=files)
-            
+            print("post issue")
             if upload_response.status_code == 200:
                 return {
                     'message': 'Processing completed successfully',
@@ -87,10 +78,26 @@ def home():
         }
     })
 
-@app.route('/process', methods=['GET'])
-def trigger_processing():
-    result = process_image()
-    return jsonify(result)
+@app.route('/process', methods=['POST'])
+def process_post():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if file:
+        filename = secure_filename(file.filename)
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(file_path)
+        # Respond immediately
+        response = {
+            'message': 'File uploaded successfully, processing started.',
+            'filename': filename,
+            'size': os.path.getsize(file_path)
+        }
+        # Start processing in background
+        Thread(target=process_image, args=(file_path,)).start()
+        return jsonify(response)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
