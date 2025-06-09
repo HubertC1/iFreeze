@@ -146,7 +146,8 @@ def handle_text_message(event):
         if text == "take photo":
             # Make the curl request to trigger photo
             try:
-                response = requests.get("https://3583-140-112-194-44.ngrok-free.app/trigger-photo")
+                rpi_api_base = os.getenv('RPI_API_BASE')
+                response = requests.get(f"{rpi_api_base}/trigger-photo")
                 if response.status_code == 200:
                     # Wait a moment for the photo to be saved
                     time.sleep(2)
