@@ -19,9 +19,23 @@ import shutil
 import json
 import requests
 import base64
+from pydantic import BaseModel
+from typing import List
+import openai
 
 # Global variable to track photo request state
 take_photo_requested = False
+
+# Recipe-related models
+class IngredientsRequest(BaseModel):
+    ingredients: List[str]
+
+class RecipeSummaryResponse(BaseModel):
+    title: str
+    url: str
+    summary: str
+    ingredients: List[str]
+    instructions: str
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -394,6 +408,76 @@ def delete_food(food_id: int, db: Session = Depends(get_db)):
     db.delete(food_item)
     db.commit()
     return {"status": "success", "message": f"Deleted food item {food_id}"}
+
+# Recipe functionality
+recipe_schema = {
+    "type": "object",
+    "properties": {
+        "title": {
+            "type": "string",
+            "description": "The title of the recipe"
+        },
+        "url": {
+            "type": "string",
+            "description": "URL to the recipe source or 'N/A' if not available"
+        },
+        "summary": {
+            "type": "string",
+            "description": "A brief summary of the recipe"
+        },
+        "ingredients": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of ingredients needed for the recipe"
+        },
+        "instructions": {
+            "type": "string",
+            "description": "Step-by-step cooking instructions"
+        }
+    },
+    "required": ["title", "url", "summary", "ingredients", "instructions"],
+    "additionalProperties": False
+}
+
+def find_recipe_with_web_search(ingredients: List[str]):
+    api_key = os.getenv('OPENAI_API_KEY')
+    client = openai.OpenAI(api_key=api_key)
+    
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",  # Using gpt-4o-mini instead of gpt-4o-search-preview
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that creates recipes based on given ingredients. You must return structured JSON data."},
+            {"role": "user", "content": f"Create a recipe that uses these ingredients: {', '.join(ingredients)}. Provide a recipe with title, URL (use 'N/A' if not from a specific source), summary, complete ingredient list, and detailed step-by-step instructions."}
+        ],
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "recipe_response",
+                "schema": recipe_schema
+            }
+        }
+    )
+    
+    # Parse the structured JSON response
+    content = response.choices[0].message.content
+    recipe_data = json.loads(content)
+    
+    return recipe_data
+
+@app.post("/find_recipe", response_model=RecipeSummaryResponse)
+def find_recipe(request: IngredientsRequest):
+    try:
+        recipe = find_recipe_with_web_search(request.ingredients)
+        return RecipeSummaryResponse(
+            title=recipe['title'],
+            url=recipe['url'],
+            summary=recipe['summary'],
+            ingredients=recipe['ingredients'],
+            instructions=recipe['instructions']
+        )
+    except Exception as e:
+        logging.error(f"[ERROR] Recipe generation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate recipe: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
