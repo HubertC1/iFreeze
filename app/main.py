@@ -107,15 +107,42 @@ async def get_foods(db: Session = Depends(get_db)):
 
 @app.post("/fridge/image")
 async def process_fridge_image(file: UploadFile = File(...)):
-    image_bytes = await file.read()
-    logging.info(f"[DEBUG] Received file: {file.filename}, size: {len(image_bytes)} bytes, content_type: {file.content_type}")
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    # Save with original filename and extension, prefixed with timestamp
-    filename = f"api_{timestamp}_{file.filename}"
-    filepath = os.path.join(STATIC_IMAGE_DIR, filename)
-    with open(filepath, 'wb') as f:
-        f.write(image_bytes)
-    return {"status": "success", "message": f"[DEBUG] File received and saved as: {filepath}"}
+    try:
+        # Read the uploaded file
+        image_bytes = await file.read()
+        logging.info(f"[DEBUG] Received file: {file.filename}, size: {len(image_bytes)} bytes, content_type: {file.content_type}")
+        
+        # Save image to static/images with timestamp like LINE bot does
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"api_{timestamp}_{file.filename}" if file.filename else f"api_{timestamp}.jpg"
+        filepath = os.path.join(STATIC_IMAGE_DIR, filename)
+        
+        with open(filepath, 'wb') as f:
+            f.write(image_bytes)
+        
+        logging.info(f"[DEBUG] Image saved to: {filepath}")
+        
+        # Process the image using the same pipeline as LINE bot
+        success, response_text = process_image(filepath)
+        logging.info(f"[DEBUG] Image processing result: {success}, Response: {response_text}")
+        
+        if success:
+            return {
+                "status": "success", 
+                "message": "Image uploaded and sent for processing",
+                "filename": filename,
+                "processing_response": response_text
+            }
+        else:
+            return {
+                "status": "partial_success",
+                "message": f"Image saved but processing failed: {response_text}",
+                "filename": filename
+            }
+            
+    except Exception as e:
+        logging.error(f"[ERROR] Error processing image: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 # Helper function to process the uploaded zip file
 # This function will be run in the background
@@ -321,35 +348,35 @@ async def check_take_photo():
         return {"status": "success", "take_photo": True}
     return {"status": "success", "take_photo": False}
 
-@app.post("/upload/image")
-async def upload_image(file: UploadFile = File(...)):
-    # Check if file is an image
-    if not file.content_type.startswith('image/'):
-        raise HTTPException(status_code=400, detail="Only image files are allowed")
+# @app.post("/upload/image")
+# async def upload_image(file: UploadFile = File(...)):
+#     # Check if file is an image
+#     if not file.content_type.startswith('image/'):
+#         raise HTTPException(status_code=400, detail="Only image files are allowed")
     
-    # Read the file content
-    file_bytes = await file.read()
-    logging.info(f"[DEBUG] Received image file: {file.filename}, size: {len(file_bytes)} bytes, content_type: {file.content_type}")
+#     # Read the file content
+#     file_bytes = await file.read()
+#     logging.info(f"[DEBUG] Received image file: {file.filename}, size: {len(file_bytes)} bytes, content_type: {file.content_type}")
     
-    # Save with timestamp prefix
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    filename = f"rpi_{timestamp}_{file.filename}"
-    filepath = os.path.join(STATIC_IMAGE_DIR, filename)
+#     # Save with timestamp prefix
+#     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+#     filename = f"rpi_{timestamp}_{file.filename}"
+#     filepath = os.path.join(STATIC_IMAGE_DIR, filename)
     
-    # Save the file
-    with open(filepath, 'wb') as f:
-        f.write(file_bytes)
+#     # Save the file
+#     with open(filepath, 'wb') as f:
+#         f.write(file_bytes)
     
-    # Process the image
-    success, response_text = process_image(filepath)
+#     # Process the image
+#     success, response_text = process_image(filepath)
     
-    return {
-        "status": "success" if success else "error",
-        "message": response_text,
-        "filename": filename,
-        "size": len(file_bytes),
-        "url": f"/static/images/{filename}"
-    }
+#     return {
+#         "status": "success" if success else "error",
+#         "message": response_text,
+#         "filename": filename,
+#         "size": len(file_bytes),
+#         "url": f"/static/images/{filename}"
+#     }
 
 @app.get("/static/ind_images/{filename}")
 async def get_ind_image(filename: str):
@@ -358,6 +385,15 @@ async def get_ind_image(filename: str):
     if not os.path.exists(image_path):
         raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
     return FileResponse(image_path)
+
+@app.delete("/fridge/foods/{food_id}")
+def delete_food(food_id: int, db: Session = Depends(get_db)):
+    food_item = db.query(FoodItem).filter(FoodItem.id == food_id).first()
+    if not food_item:
+        raise HTTPException(status_code=404, detail="Food item not found")
+    db.delete(food_item)
+    db.commit()
+    return {"status": "success", "message": f"Deleted food item {food_id}"}
 
 if __name__ == "__main__":
     import uvicorn
