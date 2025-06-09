@@ -6,7 +6,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, ImageMessage
 import os
 from dotenv import load_dotenv
-from .line_bot.handler import handle_text_message, handle_image_message
+from .line_bot.handler import handle_text_message, handle_image_message, process_image
 from .models.database import Base
 from .database import engine, get_db
 from sqlalchemy.orm import Session
@@ -14,6 +14,9 @@ import logging
 from datetime import datetime
 from .models.database import FoodItem
 from fastapi.responses import FileResponse
+
+# Global variable to track photo request state
+take_photo_requested = False
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -154,6 +157,50 @@ async def list_images():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/set-take-photo")
+async def set_take_photo():
+    global take_photo_requested
+    take_photo_requested = True
+    return {"status": "success", "message": "Photo request set to true"}
+
+@app.get("/api/check-take-photo")
+async def check_take_photo():
+    global take_photo_requested
+    if take_photo_requested:
+        take_photo_requested = False  # Reset the flag after checking
+        return {"status": "success", "take_photo": True}
+    return {"status": "success", "take_photo": False}
+
+@app.post("/upload/image")
+async def upload_image(file: UploadFile = File(...)):
+    # Check if file is an image
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+    
+    # Read the file content
+    file_bytes = await file.read()
+    logging.info(f"[DEBUG] Received image file: {file.filename}, size: {len(file_bytes)} bytes, content_type: {file.content_type}")
+    
+    # Save with timestamp prefix
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f"rpi_{timestamp}_{file.filename}"
+    filepath = os.path.join(STATIC_IMAGE_DIR, filename)
+    
+    # Save the file
+    with open(filepath, 'wb') as f:
+        f.write(file_bytes)
+    
+    # Process the image
+    success, response_text = process_image(filepath)
+    
+    return {
+        "status": "success" if success else "error",
+        "message": response_text,
+        "filename": filename,
+        "size": len(file_bytes),
+        "url": f"/static/images/{filename}"
+    }
 
 if __name__ == "__main__":
     import uvicorn
