@@ -3,8 +3,9 @@ import './App.css';
 
 // API base URL is now read from VITE_NGROK_URL_BASE in .env file
 const API_BASE = import.meta.env.VITE_NGROK_URL_BASE || 'http://localhost:8000';
+console.log('API_BASE:', API_BASE);
 const API_URL = `${API_BASE}/fridge/foods`;
-const IMAGE_PLACEHOLDER = '/app/static/images/api_20250607_194207_photo.jpg'; // Placeholder image path
+const IMAGE_PLACEHOLDER = `${API_BASE}/api/images/placeholder.jpg`; // Placeholder image path
 
 const categoryIcons = {
   Food: '🍕',
@@ -41,11 +42,15 @@ function FoodCard({ food, onDetails }) {
 
 function DetailsModal({ food, onClose }) {
   if (!food) return null;
+  // Construct the image URL using temp_object_id
+  const imgUrl = food.temp_object_id !== undefined && food.temp_object_id !== null
+    ? `${API_BASE}/static/ind_images/object_${food.temp_object_id}.png`
+    : IMAGE_PLACEHOLDER;
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={e => e.stopPropagation()}>
         <h2>{food.name}</h2>
-        <img src={IMAGE_PLACEHOLDER} alt={food.name} style={{width: '100%', borderRadius: '10px', marginBottom: '1rem'}} />
+        <img src={imgUrl} alt={food.name} style={{width: '100%', borderRadius: '10px', marginBottom: '1rem'}} />
         <p><b>Category:</b> {food.category}</p>
         <p><b>Added:</b> {food.added_date}</p>
         {food.expiry_date && <p><b>Expiry:</b> {food.expiry_date}</p>}

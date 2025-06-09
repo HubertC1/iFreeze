@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, Depends, File, UploadFile
+from fastapi import FastAPI, Request, HTTPException, Depends, File, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from linebot import LineBotApi, WebhookHandler
@@ -14,6 +14,11 @@ import logging
 from datetime import datetime
 from .models.database import FoodItem
 from fastapi.responses import FileResponse
+import zipfile
+import shutil
+import json
+import requests
+import base64
 
 # Global variable to track photo request state
 take_photo_requested = False
@@ -84,6 +89,10 @@ async def get_status(db: Session = Depends(get_db)):
 @app.get("/fridge/foods")
 async def get_foods(db: Session = Depends(get_db)):
     foods = db.query(FoodItem).all()
+    processed_foods = [
+        f for f in foods
+        if not (f.name.startswith("Object") and f.category == "unknown")
+    ]
     return [
         {
             "id": f.id,
@@ -91,9 +100,10 @@ async def get_foods(db: Session = Depends(get_db)):
             "category": f.category,
             "added_date": f.added_date.strftime('%Y-%m-%d'),
             "expiry_date": f.expiry_date.strftime('%Y-%m-%d') if f.expiry_date else None,
-            "status": f.status
+            "status": f.status,
+            "temp_object_id": f.temp_object_id
         }
-        for f in foods
+        for f in processed_foods
     ]
 
 @app.post("/fridge/image")
@@ -108,28 +118,168 @@ async def process_fridge_image(file: UploadFile = File(...)):
         f.write(image_bytes)
     return {"status": "success", "message": f"[DEBUG] File received and saved as: {filepath}"}
 
+# Helper function to process the uploaded zip file
+# This function will be run in the background
+
+def process_zip_file(zip_path):
+    import time
+    from app.models.database import FoodItem, Base
+    from app.database import SessionLocal
+    
+    # 1. Unzip the file to a temp directory
+    temp_dir = zip_path + "_unzipped"
+    os.makedirs(temp_dir, exist_ok=True)
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(temp_dir)
+
+    # 2. Load JSON files from the 'json' subdirectory
+    def load_json(filename):
+        with open(os.path.join(temp_dir, 'json', filename), 'r') as f:
+            return json.load(f)
+    try:
+        old_json = load_json('old.json')
+        new_json = load_json('new.json')
+        match_json = load_json('match.json')
+        delete_json = load_json('delete.json')
+        add_json = load_json('add.json')
+    except Exception as e:
+        print(f"[ERROR] Failed to load JSONs: {e}")
+        shutil.rmtree(temp_dir)
+        return
+
+    # 3. Open DB session
+    db = SessionLocal()
+    try:
+        # 4. Delete items in delete.json
+        for entry in delete_json:
+            old_id = entry['old_object_id']
+            item = db.query(FoodItem).filter(FoodItem.temp_object_id == old_id).first()
+            if item:
+                db.delete(item)
+        db.commit()
+
+        # 5. Update matched items (change temp_object_id)
+        for entry in match_json:
+            old_id = entry['old_object_id']
+            new_id = entry['new_object_id']
+            item = db.query(FoodItem).filter(FoodItem.temp_object_id == old_id).first()
+            if item:
+                item.temp_object_id = new_id
+        db.commit()
+
+        # 6. Add new items from add.json
+        for entry in add_json:
+            new_id = entry['new_object_id']
+            # You may want to extract more info from new_json (like bounding_box, image_path)
+            # For now, just add with temp_object_id
+            new_item = FoodItem(temp_object_id=new_id, name=f"Object {new_id}", category="unknown", status="fresh")
+            db.add(new_item)
+        db.commit()
+    finally:
+        db.close()
+
+    # 7. Update images in static/ind_images
+    IND_IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'static', 'ind_images')
+    # Remove all existing images
+    for f in os.listdir(IND_IMAGES_DIR):
+        file_path = os.path.join(IND_IMAGES_DIR, f)
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+    # Copy images for all current items (based on new_json)
+    for obj in new_json:
+        img_src = os.path.join(temp_dir, os.path.basename(obj['image_path']))
+        img_dst = os.path.join(IND_IMAGES_DIR, os.path.basename(obj['image_path']))
+        if os.path.exists(img_src):
+            shutil.copy(img_src, img_dst)
+
+    # 8. Clean up temp dir
+    shutil.rmtree(temp_dir)
+
+    # 9. Analyze images and update FoodItem info
+    update_food_items_from_images()
+
+def analyze_image_with_openai(image_path):
+    from dotenv import load_dotenv
+    from openai import OpenAI
+    load_dotenv()
+    ngrok_base = os.getenv('VITE_NGROK_URL_BASE')
+    api_key = os.getenv('OPENAI_API_KEY')
+    print(f"apikey:{api_key}")
+    client = OpenAI(api_key=api_key)
+    filename = os.path.basename(image_path)
+    image_url = f"{ngrok_base}/static/ind_images/{filename}"
+    
+    try:
+        response = client.responses.create(
+            model="gpt-4o-mini",
+            input=[
+                {"role": "user", "content": "Analyze the image and list all visible food items, their estimated category, expiry date (if possible), and whether they look fresh, spoiling, or spoiled. Return your answer as a JSON object with keys: name, category, expiry_date, status. If you don't know expiry_date, return null."},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_image", 
+                            "image_url": image_url
+                        }
+                    ]
+                }
+            ]
+        )
+        content = response.output_text
+        import json as pyjson
+        start = content.find('{')
+        end = content.rfind('}') + 1
+        json_str = content[start:end]
+        return pyjson.loads(json_str)
+    except Exception as e:
+        print(f"[ERROR] OpenAI API call failed or response parsing failed: {e}")
+        return None
+
+def update_food_items_from_images():
+    IND_IMAGES_DIR = os.path.join(os.path.dirname(__file__), 'static', 'ind_images')
+    from app.models.database import FoodItem
+    from app.database import SessionLocal
+    db = SessionLocal()
+    try:
+        for filename in os.listdir(IND_IMAGES_DIR):
+            if filename.endswith('.png'):
+                try:
+                    temp_object_id = int(filename.split('_')[1].split('.')[0])  # e.g., object_3.png → 3
+                except Exception as e:
+                    print(f"[ERROR] Could not parse temp_object_id from {filename}: {e}")
+                    continue
+                image_path = os.path.join(IND_IMAGES_DIR, filename)
+                food_info = analyze_image_with_openai(image_path)
+                item = db.query(FoodItem).filter(FoodItem.temp_object_id == temp_object_id).first()
+                if item and food_info:
+                    item.name = food_info.get('name', item.name)
+                    item.category = food_info.get('category', item.category)
+                    item.status = food_info.get('status', item.status)
+                    expiry = food_info.get('expiry_date')
+                    if expiry:
+                        from datetime import datetime
+                        try:
+                            item.expiry_date = datetime.fromisoformat(expiry)
+                        except Exception:
+                            item.expiry_date = None
+        db.commit()
+    finally:
+        db.close()
+
 @app.post("/upload/zip")
-async def upload_zip(file: UploadFile = File(...)):
+async def upload_zip(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Only .zip files are allowed")
-    
-    # Create a directory for zip files if it doesn't exist
     ZIP_DIR = os.path.join(os.path.dirname(__file__), 'static', 'zips')
     os.makedirs(ZIP_DIR, exist_ok=True)
-    
-    # Read the file content
     file_bytes = await file.read()
-    logging.info(f"[DEBUG] Received zip file: {file.filename}, size: {len(file_bytes)} bytes")
-    
-    # Save with timestamp prefix
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     filename = f"upload_{timestamp}_{file.filename}"
     filepath = os.path.join(ZIP_DIR, filename)
-    
-    # Save the file
     with open(filepath, 'wb') as f:
         f.write(file_bytes)
-    
+    # Add background task for processing
+    background_tasks.add_task(process_zip_file, filepath)
     return {
         "status": "success",
         "message": f"File uploaded successfully",
@@ -201,6 +351,14 @@ async def upload_image(file: UploadFile = File(...)):
         "size": len(file_bytes),
         "url": f"/static/images/{filename}"
     }
+
+@app.get("/static/ind_images/{filename}")
+async def get_ind_image(filename: str):
+    ind_images_dir = os.path.join(os.path.dirname(__file__), 'static', 'ind_images')
+    image_path = os.path.join(ind_images_dir, filename)
+    if not os.path.exists(image_path):
+        raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+    return FileResponse(image_path)
 
 if __name__ == "__main__":
     import uvicorn
