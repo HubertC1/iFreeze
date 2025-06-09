@@ -13,3 +13,6 @@ opencv-python
 numpy
 torch
 transformers 
+beautifulsoup4
+openai>=0.28
+uvicorn 
