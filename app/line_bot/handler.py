@@ -97,7 +97,7 @@ def handle_text_message(event):
             try:
                 rpi_host = os.getenv('RPI_HOST', 'raspberrypi.local')
                 rpi_user = os.getenv('RPI_USER', 'pi')
-                rpi_trigger_dir = os.getenv('RPI_TRIGGER_DIR', '/home/team5/ifridge/')
+                rpi_trigger_dir = os.getenv('RPI_TRIGGER_DIR', '/home/team5/i_fridge/')
                 
                 # Create the command
                 scp_command = f"scp {trigger_file} {rpi_user}@{rpi_host}:{rpi_trigger_dir}/"
