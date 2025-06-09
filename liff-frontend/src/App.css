@@ -1,8 +1,10 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  margin: 0;
+  padding: 1rem;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 50%, #e1f5fe 100%);
+  min-height: 100vh;
 }
 
 .logo {
@@ -35,6 +37,11 @@
 
 .card {
   padding: 2em;
+  position: relative;
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .read-the-docs {
@@ -44,103 +51,348 @@
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1rem;
 }
 
 h1 {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  letter-spacing: -0.5px;
 }
 
 .card-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
-  justify-content: center;
+  margin-bottom: 2rem;
 }
 
 .card {
-  background: #fffbe7;
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  width: 260px;
-  min-height: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  padding: 1.2rem 1rem 1rem 1rem;
-  transition: box-shadow 0.2s;
-}
-.card:hover {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 0.5rem;
-}
-.category-icon {
-  font-size: 2rem;
-}
-.card-body h3 {
-  margin: 0.2rem 0 0.5rem 0;
-  font-size: 1.3rem;
-}
-.dates {
-  font-size: 0.95rem;
-  color: #888;
-  margin-bottom: 0.5rem;
-}
-.status {
-  margin-bottom: 0.7rem;
-  font-size: 1.05rem;
-}
-.details-btn {
-  background: #bfcaff;
-  border: none;
-  border-radius: 8px;
-  padding: 0.5rem 1.2rem;
-  font-size: 1rem;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  overflow: hidden;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  margin-top: auto;
-  transition: background 0.2s;
-}
-.details-btn:hover {
-  background: #a0b6ff;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
-/* Modal styles */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+}
+
+.card-status-bar {
+  height: 6px;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+}
+
+.card.status-spoiling .card-status-bar {
+  background: linear-gradient(90deg, #FF9800, #FFC107);
+}
+
+.card.status-spoiled .card-status-bar {
+  background: linear-gradient(90deg, #F44336, #E91E63);
+}
+
+.card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 200px;
+  position: relative;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: #757575;
+  border: none;
+  border-radius: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+  color: #f44336;
+  transform: scale(1.1);
+}
+
+.category-badge {
+  background: rgba(103, 126, 234, 0.1);
+  color: #667eea;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.food-thumb-box {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.food-thumb {
+  max-width: 90px;
+  max-height: 90px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+  line-height: 1.3;
+}
+
+/* Status Colors */
+.card.status-fresh {
+  background: linear-gradient(135deg, #E8F5E8 0%, #F1F9F1 100%);
+}
+
+.card.status-spoiling {
+  background: linear-gradient(135deg, #FFF8E1 0%, #FFFBF0 100%);
+}
+
+.card.status-spoiled {
+  background: linear-gradient(135deg, #FFEBEE 0%, #FFF5F5 100%);
+}
+
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0,0,0,0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
+
 .modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 2rem 2.5rem;
-  min-width: 320px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2rem 2.5rem 2.5rem;
+  min-width: 400px;
   max-width: 90vw;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.2);
+  position: relative;
 }
-@media (max-width: 700px) {
-  .container {
+
+.modal h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #2c3e50;
+  padding-right: 3rem;
+}
+
+.modal p {
+  margin: 0.8rem 0;
+  font-size: 1rem;
+  color: #546e7a;
+  line-height: 1.5;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(0,0,0,0.05);
+  border: none;
+  color: #757575;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close-btn:hover {
+  background: rgba(0,0,0,0.1);
+  color: #424242;
+  transform: scale(1.1);
+}
+
+.modal img {
+  max-width: 100%;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+/* Recipe Section */
+.recipe-section {
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 2.5rem 2rem;
+  margin-top: 3rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.recipe-section h2 {
+  text-align: center;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 2rem;
+}
+
+.ingredient-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.ingredient-checkbox {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.ingredient-checkbox:hover {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.ingredient-checkbox.selected {
+  background: #667eea;
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.recipe-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+  display: block;
+  margin: 0 auto 2rem;
+}
+
+.recipe-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.recipe-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.recipe-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  padding: 2rem;
+  margin: 0 auto;
+  max-width: 600px;
+  text-align: left;
+  border: 1px solid rgba(102, 126, 234, 0.1);
+}
+
+.recipe-card h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.recipe-card .recipe-meta {
+  font-size: 0.9rem;
+  color: #667eea;
+  margin-bottom: 1rem;
+  font-weight: 500;
+}
+
+.recipe-card ul, .recipe-card ol {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+  color: #546e7a;
+  line-height: 1.6;
+}
+
+.recipe-card li {
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  #root {
     padding: 0.5rem;
   }
-  .card {
-    width: 95vw;
-    min-width: 0;
-    margin: 0 auto;
+  
+  .container {
+    padding: 1rem 0.5rem;
   }
+  
+  h1 {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  .card-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
   .modal {
     min-width: 0;
-    padding: 1.2rem 0.5rem;
+    margin: 1rem;
+    padding: 1.5rem 1rem 2rem;
+  }
+  
+  .recipe-section {
+    padding: 1.5rem 1rem;
+    margin-top: 2rem;
   }
 }
