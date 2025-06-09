@@ -6,7 +6,7 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, ImageMessage
 import os
 from dotenv import load_dotenv
-from .line_bot.handler import handle_text_message, handle_image_message, process_image
+from .line_bot.handler import handle_text_message, handle_image_message, process_image, handler
 from .models.database import Base
 from .database import engine, get_db
 from sqlalchemy.orm import Session
@@ -51,7 +51,6 @@ app.mount("/static/images", StaticFiles(directory=STATIC_IMAGE_DIR), name="stati
 
 # LINE Bot setup
 line_bot_api = LineBotApi(os.getenv('LINE_CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.getenv('LINE_CHANNEL_SECRET'))
 
 @app.post("/webhook")
 async def line_webhook(request: Request):
@@ -262,7 +261,7 @@ def update_food_items_from_images():
                             item.expiry_date = datetime.fromisoformat(expiry)
                         except Exception:
                             item.expiry_date = None
-        db.commit()
+            db.commit()
     finally:
         db.close()
 

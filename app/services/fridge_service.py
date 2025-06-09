@@ -18,12 +18,22 @@ def get_fridge_status(db: Session) -> str:
     if not entries:
         return "Your fridge is empty! 🧊"
     
-    status_lines = []
-    for entry in entries:
-        status = "🟢" if not entry.is_spoiled else "🔴"
-        status_lines.append(f"{status} {entry.food_item.name} ({entry.quantity})")
+    # Sort entries by status priority (spoiled -> spoiling -> fresh)
+    status_priority = {"spoiled": 0, "spoiling": 1, "fresh": 2}
+    sorted_entries = sorted(entries, key=lambda x: status_priority.get(x.food_item.status.lower(), 3))
     
-    return "\n".join(status_lines)
+    status_lines = []
+    for entry in sorted_entries:
+        status = entry.food_item.status.lower()
+        if status == "spoiled":
+            emoji = "🔴"
+        elif status == "spoiling":
+            emoji = "🟡"
+        else:
+            emoji = "🟢"
+        status_lines.append(f"{emoji} {entry.food_item.name} ({entry.quantity}) - {entry.food_item.status}")
+    
+    return "Fridge Contents:\n" + "\n".join(status_lines)
 
 def add_food_item(name: str, quantity: float, db: Session = next(get_db())):
     """Add a new food item to the fridge"""
