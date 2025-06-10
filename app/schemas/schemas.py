@@ -18,21 +18,6 @@ class FoodItem(FoodItemBase):
     class Config:
         from_attributes = True
 
-class FridgeEntryBase(BaseModel):
-    food_item_id: int
-    quantity: float
-    is_spoiled: bool = False
-
-class FridgeEntryCreate(FridgeEntryBase):
-    pass
-
-class FridgeEntry(FridgeEntryBase):
-    id: int
-    detected_date: datetime
-
-    class Config:
-        from_attributes = True
-
 class UserBase(BaseModel):
     line_user_id: str
 

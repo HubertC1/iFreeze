@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from ..schemas.schemas import RecipeSuggestion
 from ..database import get_db
 from sqlalchemy.orm import Session
-from ..models.database import FoodItem, FridgeEntry
+from ..models.database import FoodItem
 from openai import OpenAI
 
 load_dotenv()

@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import subprocess
 import requests
 import json
+import time
 
 load_dotenv()
 
@@ -143,42 +144,46 @@ def handle_text_message(event):
     db = next(get_db())
     try:
         if text == "take photo":
-            # Create a trigger file
-            trigger_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'triggers')
-            os.makedirs(trigger_dir, exist_ok=True)
-            trigger_file = os.path.join(trigger_dir, 'take_photo.trigger')
-            
-            # Create an empty trigger file
-            with open(trigger_file, 'w') as f:
-                f.write('')
-            
-            # SCP the trigger file to Raspberry Pi
+            # Make the curl request to trigger photo
             try:
-                rpi_host = os.getenv('RPI_HOST', 'raspberrypi.local')
-                rpi_user = os.getenv('RPI_USER', 'pi')
-                rpi_trigger_dir = os.getenv('RPI_TRIGGER_DIR', '/home/team5/i_fridge/')
-                
-                # Create the command
-                scp_command = f"scp {trigger_file} {rpi_user}@{rpi_host}:{rpi_trigger_dir}/"
-                
-                # Execute SCP
-                result = subprocess.run(scp_command, shell=True, capture_output=True, text=True)
-                
-                if result.returncode == 0:
-                    response = "📸 Photo request sent! Taking a photo..."
+                rpi_api_base = os.getenv('RPI_API_BASE')
+                response = requests.get(f"{rpi_api_base}/trigger-photo")
+                if response.status_code == 200:
+                    # Wait a moment for the photo to be saved
+                    time.sleep(2)
+                    
+                    # Get the most recent photo from static/images
+                    image_files = [f for f in os.listdir(STATIC_IMAGE_DIR) if f.endswith('.jpg')]
+                    if image_files:
+                        # Sort by modification time (newest first)
+                        latest_image = max(image_files, key=lambda x: os.path.getmtime(os.path.join(STATIC_IMAGE_DIR, x)))
+                        
+                        # Send both text and image messages
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            [
+                                TextSendMessage(text="📸 Photo taken! Here's what I see:"),
+                                ImageSendMessage(
+                                    original_content_url=f"{NGROK_URL_BASE}/static/images/{latest_image}",
+                                    preview_image_url=f"{NGROK_URL_BASE}/static/images/{latest_image}"
+                                )
+                            ]
+                        )
+                    else:
+                        line_bot_api.reply_message(
+                            event.reply_token,
+                            TextSendMessage(text="📸 Photo request sent! Taking a photo...")
+                        )
                 else:
-                    response = f"❌ Failed to send photo request: {result.stderr}"
-                
-                # Remove the local trigger file
-                os.remove(trigger_file)
-                
+                    line_bot_api.reply_message(
+                        event.reply_token,
+                        TextSendMessage(text=f"❌ Failed to trigger photo: {response.status_code}")
+                    )
             except Exception as e:
-                response = f"❌ Error sending photo request: {str(e)}"
-            
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=response)
-            )
+                line_bot_api.reply_message(
+                    event.reply_token,
+                    TextSendMessage(text=f"❌ Error triggering photo: {str(e)}")
+                )
             
         elif text == "recipe":
             # Get food list for carousel with selection status
