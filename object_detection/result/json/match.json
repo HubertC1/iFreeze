@@ -2,11 +2,16 @@
     {
         "old_object_id": 0,
         "new_object_id": 0,
-        "iou": 1.0
+        "iou": 0.9768945852195896
     },
     {
         "old_object_id": 1,
         "new_object_id": 1,
+        "iou": 0.9940119760479041
+    },
+    {
+        "old_object_id": 2,
+        "new_object_id": 2,
         "iou": 1.0
     }
 ]

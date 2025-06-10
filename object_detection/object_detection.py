@@ -37,13 +37,13 @@ def calculate_iou(box1, box2):
     iou = intersection / union if union != 0 else 0
     return iou
 
-def detect_objects(img_path, json_path, save_dir, threshold=0.4):
+def detect_objects(img_path, json_path, save_dir, threshold=0.3):
     # Load the model and processor
     model_id = "IDEA-Research/grounding-dino-base"
     device = "cuda"
     processor = AutoProcessor.from_pretrained(model_id)
     model = AutoModelForZeroShotObjectDetection.from_pretrained(model_id).to(device)
-
+    detect_save_dir='detect_result'
     # Load the image using OpenCV
     image = cv2.imread(img_path)
 
@@ -51,7 +51,7 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Define text labels
-    text_labels = [["drinks", "food", "fruit","vegetable", "meat", "grocery"]]
+    text_labels = [["box", "bottle", "vegetable", "meat", "bread", "fruit", "drink", "food"]]
 
     # Prepare inputs
     inputs = processor(images=image_rgb, text=text_labels, return_tensors="pt").to(device)
@@ -63,7 +63,7 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
         outputs,
         inputs.input_ids,
         box_threshold=threshold,
-        text_threshold=0.3,
+        text_threshold=0.1,
         target_sizes=[(image.shape[0], image.shape[1])]  # Use height and width from OpenCV
     )
 
@@ -82,13 +82,20 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
 
     # Draw bounding boxes and crop objects using OpenCV
     object_id = 0
+    object_idd = 0
     for box, score in zip(boxes, scores):
         if score > threshold:  # Confidence threshold
             x1, y1, x2, y2 = map(int, box)
             object_data.append({
-                'object_id': object_id,
+                'object_id': object_idd,
                 'bounding_box': [x1, y1, x2, y2],
             })
+            object_image_path = os.path.join(detect_save_dir, f'object_{object_idd}.png')
+            # x1, y1, x2, y2 = map(int, obj1['bounding_box'])
+            cropped_object = image[y1:y2, x1:x2]
+            cv2.imwrite(object_image_path, cropped_object)
+            object_idd+=1
+        
             
 
     # Remove redundant boxes based on IoU before writing to JSON
@@ -98,7 +105,7 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
         for j, obj2 in enumerate(object_data):
             if i > j:
                 iou = calculate_iou(obj1['bounding_box'], obj2['bounding_box'])
-                if iou > 0.9:
+                if iou > 0.4:
                     is_redundant = True
                     break
         if not is_redundant:
@@ -111,6 +118,7 @@ def detect_objects(img_path, json_path, save_dir, threshold=0.4):
                 'bounding_box': obj1['bounding_box'],
                 'image_path': object_image_path
             })
+            print(f"filtered_object:{object_id}, {object_image_path}")
             object_id += 1
 
     # Write the filtered object data to a JSON file

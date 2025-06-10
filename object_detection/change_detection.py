@@ -28,7 +28,7 @@ def calculate_iou(box1, box2):
     return iou
 
 # Function to check for matching objects
-def check_matching_objects(old_json, new_json, save_dir, iou_threshold=0.5):
+def check_matching_objects(old_json, new_json, save_dir, iou_threshold=0.8):
     # Load JSON data
     with open(old_json, 'r') as f1, open(new_json, 'r') as f2:
         data1 = json.load(f1)

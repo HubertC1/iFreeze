@@ -19,13 +19,12 @@ os.makedirs(JSON_DIR, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # Configuration
-UPLOAD_URL = 'https://dae2-140-112-25-46.ngrok-free.app/upload/zip'
+UPLOAD_URL = 'https://f478-140-112-24-61.ngrok-free.app/upload/zip'
 
 def process_image(img_path):
     save_dir = './'
     # img_filename = 'fruit.png'  # Remove hardcoded filename
     # img_path = os.path.join(save_dir, img_filename)  # Use provided img_path
-    
     # Process JSON files
     json_path = os.path.join(JSON_DIR, 'new.json')
     old_json_path = os.path.join(JSON_DIR, 'old.json')

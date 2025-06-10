@@ -7,7 +7,7 @@ This project sets up a local server on port 8000 and exposes it to the internet 
 - Python 3.x
 - ngrok account and authtoken
 - pip (Python package manager)
-
+- pip install --upgrade --ignore-installed blinker
 ## Installing Ngrok on Linux
 
 1. **Download ngrok**
@@ -22,7 +22,7 @@ This project sets up a local server on port 8000 and exposes it to the internet 
 
 3. **Move ngrok to a directory in your PATH**
    ```bash
-   sudo mv ngrok /usr/local/bin/
+   mv ngrok /usr/local/bin/
    ```
 
 4. **Verify the installation**

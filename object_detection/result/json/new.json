@@ -2,21 +2,31 @@
     {
         "object_id": 0,
         "bounding_box": [
-            1373,
-            10,
-            1995,
-            999
+            937,
+            343,
+            1206,
+            595
         ],
         "image_path": "./result/object_0.png"
     },
     {
         "object_id": 1,
         "bounding_box": [
-            727,
-            369,
-            1253,
-            879
+            387,
+            242,
+            554,
+            656
         ],
         "image_path": "./result/object_1.png"
+    },
+    {
+        "object_id": 2,
+        "bounding_box": [
+            567,
+            249,
+            885,
+            672
+        ],
+        "image_path": "./result/object_2.png"
     }
 ]

@@ -5,5 +5,5 @@ numpy
 torch
 transformers
 Pillow
-flask==3.0.2
+flask
 werkzeug==3.0.1  
