@@ -58,7 +58,19 @@ PROCESSING_API_BASE=your_gpu_server_ngrok_url
 RPI_API_BASE=your_rpi_server_ngrok_url
 ```
 
-3. Running the application:
+3. Set up ngrok for exposing the FastAPI server:
+
+```bash
+# Install ngrok if you haven't already
+npm install -g ngrok
+
+# Start ngrok to expose port 8000
+ngrok http 8000
+```
+
+After starting ngrok, you'll get a public URL. Use this URL as your `VITE_NGROK_URL_BASE` in the `.env` file.
+
+4. Running the application:
 
 ```bash
 # Start the backend server
